@@ -120,6 +120,10 @@ class ReputationPassport(gl.Contract):
 	) -> None:
 		subject_addr = Address(subject)
 		subject_key = str(subject_addr)
+		clean_id = str(review_id).strip()
+		clean_text = str(text).strip()
+		if not clean_id or not clean_text:
+			raise gl.vm.UserError(f"{ERROR_EXPECTED} Review id and text must not be empty")
 		if subject_key not in self.profiles:
 			raise gl.vm.UserError(f"{ERROR_EXPECTED} Subject profile not found")
 		if rating < u256(1) or rating > u256(5):
@@ -127,18 +131,18 @@ class ReputationPassport(gl.Contract):
 		reviewer_key = str(gl.message.sender_address)
 		if reviewer_key == subject_key:
 			raise gl.vm.UserError(f"{ERROR_EXPECTED} Cannot review own profile")
-		if review_id in self.reviews:
+		if clean_id in self.reviews:
 			raise gl.vm.UserError(f"{ERROR_EXPECTED} Review id already exists")
-		self.reviews[review_id] = Review(
+		self.reviews[clean_id] = Review(
 			subject_key=subject_key,
 			reviewer_key=reviewer_key,
 			rating_x10=u256(rating * u256(10)),
-			text=text,
+			text=clean_text,
 			status=STATUS_PENDING,
 			confidence=u256(0),
 			reasoning="",
 		)
-		self.review_ids.append(review_id)
+		self.review_ids.append(clean_id)
 
 	@gl.public.write
 	def verify_review(self, review_id: str) -> None:
